@@ -1,0 +1,29 @@
+# Core Framework
+fastapi>=0.100.0
+uvicorn[standard]>=0.22.0
+
+# Database
+motor>=3.2.0
+pymongo>=4.5.0
+
+# Settings & Environment
+pydantic-settings>=2.0.0
+pydantic[email]>=2.0.0
+python-dotenv>=1.0.0
+
+# Authentication
+passlib[bcrypt]>=1.7.4
+# passlib 1.7.4 expects bcrypt's legacy version metadata.
+bcrypt==4.0.1
+pyjwt>=2.8.0
+
+# Form Data
+python-multipart>=0.0.6
+
+# Resume Parsing
+pymupdf>=1.24.0           # PDF text extraction  (import fitz)
+python-docx>=1.1.0        # DOCX text extraction (import docx)
+
+# AI / LLM
+google-generativeai>=0.7.0  # Gemini (primary)
+openai>=1.30.0              # OpenAI (fallback)
