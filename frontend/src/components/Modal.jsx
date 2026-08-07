@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 export default function Modal({
   isOpen = false,
@@ -19,10 +20,22 @@ export default function Modal({
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') onClose?.();
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div
+      role="presentation"
       style={{
         position: 'fixed',
         top: 0,
@@ -54,6 +67,9 @@ export default function Modal({
 
       {/* Modal Dialog Card */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title || 'Dialog'}
         style={{
           position: 'relative',
           width: '100%',
@@ -120,7 +136,8 @@ export default function Modal({
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
