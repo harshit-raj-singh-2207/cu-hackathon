@@ -18,8 +18,10 @@ import { SECTION_SCHEMA } from './sectionSchema';
 import { RepeatingSection } from './SectionSystem';
 import { resumeService } from '../../services/resumeService';
 
+import ATSChecker from '../ATS/index';
+
 export default function Resume() {
-  const [activeTab, setActiveTab] = useState('builder'); // 'builder' | 'analyzer'
+  const [activeTab, setActiveTab] = useState('builder'); // 'builder' | 'analyzer' | 'ats'
 
   return (
     <div className="resume-page">
@@ -29,7 +31,7 @@ export default function Resume() {
         <div className="resume-header__left">
           <span className="resume-header__eyebrow">✦ Resume Suite</span>
           <h1 className="resume-header__title">AI Resume Workspace</h1>
-          <p className="resume-header__subtitle">Craft or analyze resumes tailored specifically for automated recruiters and top tech companies.</p>
+          <p className="resume-header__subtitle">Craft, analyze, and match your resume for recruiters and ATS systems.</p>
         </div>
 
         {/* Workspace Mode Tab Toggle */}
@@ -44,13 +46,21 @@ export default function Resume() {
             onClick={() => setActiveTab('analyzer')}
             className={`resume-mode-btn ${activeTab === 'analyzer' ? 'resume-mode-btn--active' : ''}`}
           >
-            AI Analyzer
+            Format Analyzer
+          </button>
+          <button
+            onClick={() => setActiveTab('ats')}
+            className={`resume-mode-btn ${activeTab === 'ats' ? 'resume-mode-btn--active' : ''}`}
+          >
+            Keyword ATS
           </button>
         </div>
       </header>
 
       {/* Main Mode View */}
-      {activeTab === 'builder' ? <ResumeBuilder /> : <ResumeAnalyzer />}
+      {activeTab === 'builder' && <ResumeBuilder />}
+      {activeTab === 'analyzer' && <ResumeAnalyzer />}
+      {activeTab === 'ats' && <ATSChecker />}
     </div>
   );
 }
@@ -303,6 +313,8 @@ function ResumeAnalyzer() {
   const [report, setReport] = useState(null);
   const [error, setError] = useState(null);
 
+  const [jobDescription, setJobDescription] = useState('');
+
   const handleDrag = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -340,8 +352,8 @@ function ResumeAnalyzer() {
       // 1. Upload to backend (saves to disk and extracts text)
       await resumeService.upload(fileObj);
       
-      // 2. Invoke analyzer heuristings & LLM processing
-      const data = await resumeService.analyze();
+      // 2. Invoke analyzer heuristics & LLM processing (with optional JD)
+      const data = await resumeService.analyze(jobDescription.trim() || undefined);
       setReport(data);
     } catch (err) {
       setError(err.message || 'Failed to process and analyze resume.');
@@ -355,13 +367,25 @@ function ResumeAnalyzer() {
 
       {/* Upload pane */}
       <section className="resume-section-stack">
-        <Card title="📤 Resume Parser Dropzone" subtitle="Drop your PDF or DOCX resume below for a detailed ATS audit.">
+        <Card title="📤 Resume Parser Dropzone" subtitle="Add a target Job Description (optional) and drop your PDF/DOCX below for a combined ATS & Formatting audit.">
           
           {error && (
             <div className="resume-error-banner" style={{ background: 'var(--error-bg)', color: 'var(--error)', padding: '12px', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', border: '1px solid rgba(220,38,38,0.2)' }}>
               ⚠ {error}
             </div>
           )}
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase' }}>
+              Target Job Description (Optional)
+            </label>
+            <textarea
+              placeholder="Paste the job description here before uploading your resume to check for missing ATS keywords..."
+              value={jobDescription}
+              onChange={(e) => setJobDescription(e.target.value)}
+              style={{ width: '100%', height: '100px', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-strong)', background: 'var(--bg-surface-2)', color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', fontSize: '13px', resize: 'vertical' }}
+            />
+          </div>
 
           <div
             onDragEnter={handleDrag}
@@ -412,9 +436,9 @@ function ResumeAnalyzer() {
                 <RadialProgress percent={report.score} size={80} strokeWidth={7} />
               </div>
               <div>
-                <strong className="resume-score-label">Overall ATS Formatting Score</strong>
+                <strong className="resume-score-label">Overall Match & Format Score</strong>
                 <span className="resume-score-pass">
-                  {report.score > 75 ? '✓ Strong technical format & layout.' : '⚠ Formatting improvements needed.'}
+                  {report.score > 75 ? '✓ Strong technical format & layout.' : '⚠ Improvements needed.'}
                 </span>
               </div>
             </div>
@@ -452,6 +476,21 @@ function ResumeAnalyzer() {
                   )}
                 </div>
               </div>
+
+              {jobDescription && report.missing_keywords && report.missing_keywords.length > 0 && (
+                <div>
+                  <strong className="resume-feedback__group-title resume-feedback__group-title--weakness" style={{ color: 'var(--error)' }}>
+                    ⚠ Missing JD ATS Keywords
+                  </strong>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {report.missing_keywords.map((kw, i) => (
+                      <span key={i} style={{ padding: '4px 8px', background: 'rgba(220,38,38,0.08)', borderRadius: '6px', fontSize: '12px', color: 'var(--error)', fontWeight: 600, textTransform: 'capitalize' }}>
+                        {kw}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div>
                 <strong className="resume-feedback__group-title resume-feedback__group-title--weakness">

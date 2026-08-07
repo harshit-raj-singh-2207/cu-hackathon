@@ -39,7 +39,7 @@ export default function Interview() {
         interview_type: round,
         question_count: Number(questionCount)
       };
-      const data = await interviewService.createSession(payload);
+      const data = await interviewService.startSession(payload);
       
       // Navigate to the live interview session page
       navigate(`/interview/session/${data.id}`);

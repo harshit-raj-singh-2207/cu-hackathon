@@ -58,24 +58,12 @@ export default function ATS() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '28px', animation: 'fadeIn 0.4s ease-out' }}>
       
-      {/* Header */}
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-        <div>
-          <span style={{ color: 'var(--primary-light)', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            ✦ ATS Optimizer
-          </span>
-          <h1 style={{ fontSize: '1.85rem', fontWeight: '800', color: 'var(--text-primary)', letterSpacing: '-0.03em', margin: '4px 0 0 0' }}>
-            ATS Keyword Score Checker
-          </h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: '4px 0 0 0' }}>
-            Scan keyword density matching metrics between your resume and a target role.
-          </p>
-        </div>
-
+      {/* Embed Header Controls */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '-8px' }}>
         <Button variant="secondary" onClick={loadMockData} size="sm">
           Load Sample Role & Resume
         </Button>
-      </header>
+      </div>
 
       {/* Main Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: report ? '1.2fr 1fr' : '1fr', gap: '24px', alignItems: 'start' }}>

@@ -100,7 +100,6 @@ const ICONS = {
 const SIDEBAR_LINKS = [
   { to: '/dashboard',    iconKey: 'dashboard', label: 'Overview' },
   { to: '/resume',       iconKey: 'resume',    label: 'Resume Analyzer' },
-  { to: '/ats',          iconKey: 'ats',       label: 'ATS Checker' },
   { to: '/interview',    iconKey: 'interview', label: 'Mock Interview' },
   { to: '/coding',       iconKey: 'coding',    label: 'Coding Practice' },
   { to: '/jobs',         iconKey: 'jobs',      label: 'Job Recommendations' },

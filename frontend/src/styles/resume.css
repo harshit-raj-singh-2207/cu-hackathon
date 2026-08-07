@@ -230,31 +230,32 @@
 }
 
 @media print {
-  .resume-canvas-scroll {
-    max-height: none;
-    overflow: visible;
-    background: transparent;
-    padding: 0;
+  body {
+    background: #fff;
   }
-
+  body * {
+    visibility: hidden;
+  }
+  
+  .resume-canvas, .resume-canvas * {
+    visibility: visible;
+  }
+  
   .resume-canvas {
-    width: 100%;
-    min-height: auto;
-    zoom: 1;
-    padding: 0.5in;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 210mm;
+    min-height: 297mm;
+    zoom: 1 !important;
+    padding: 0;
     margin: 0;
+    border: none;
     box-shadow: none;
-    border: 1px solid #d1d5db;
+    background: transparent;
   }
 
-  .resume-preview-card > div:first-child {
-    display: none !important;
-  }
-
-  .resume-preview-card > div:last-child {
-    padding-top: 0;
-  }
-
+  /* Keep specific text sizes if needed for print, but A4 standard is sufficient */
   .resume-canvas__name {
     font-size: 16pt;
     margin-bottom: 6pt;
