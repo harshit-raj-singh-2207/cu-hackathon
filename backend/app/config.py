@@ -1,85 +1,51 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import field_validator
-from typing import List
+"""
+Application configuration — loaded from environment / .env file.
+"""
+
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load .env from the project root (backend/)
+_env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(_env_path)
 
 
-class Settings(BaseSettings):
-    # ─── App ───────────────────────────────────────────────────────────────
-    PROJECT_NAME: str = "CareerCopilot AI Backend"
-    VERSION: str = "1.0.0"
+class _Settings:
+    """Centralised settings object consumed as ``from app.config import settings``."""
+
+    # ── API ─────────────────────────────────────────────────────────────────
     API_V1_STR: str = "/api/v1"
-    DEBUG: bool = False
+    PROJECT_NAME: str = "CareerCopilot Backend"
 
-    @field_validator("DEBUG", mode="before")
-    @classmethod
-    def parse_debug(cls, value):
-        """Safely handle generic DEBUG values inherited from the host environment."""
-        if isinstance(value, str):
-            normalized = value.strip().lower()
-            if normalized in {"1", "true", "yes", "on", "debug", "development"}:
-                return True
-            if normalized in {
-                "0",
-                "false",
-                "no",
-                "off",
-                "warn",
-                "warning",
-                "error",
-                "info",
-                "release",
-                "production",
-            }:
-                return False
-        return value
+    # ── MongoDB ─────────────────────────────────────────────────────────────
+    MONGODB_URL: str = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
+    MONGODB_DB_NAME: str = os.getenv("MONGODB_DB_NAME", "careercopilot")
 
-    # ─── MongoDB ───────────────────────────────────────────────────────────
-    MONGODB_URL: str = "mongodb://localhost:27017"
-    DATABASE_NAME: str = "careercopilot"
+    # ── JWT / Auth ──────────────────────────────────────────────────────────
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "change-me-in-production-super-secret-key-2024")
+    ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+    REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
 
-    # ─── JWT / Auth ────────────────────────────────────────────────────────
-    SECRET_KEY: str = "ai-career-copilot-super-secret-jwt-signing-key-change-in-production"
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    # ── AI / LLM ────────────────────────────────────────────────────────────
+    AI_PROVIDER: str = os.getenv("AI_PROVIDER", "gemini")           # "gemini" | "openai"
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
-    # ─── AI / LLM ──────────────────────────────────────────────────────────
-    # Google Gemini (primary)
-    GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-1.5-flash"
+    # ── ATS ─────────────────────────────────────────────────────────────────
+    ATS_PASSING_SCORE: int = int(os.getenv("ATS_PASSING_SCORE", "70"))
 
-    # OpenAI (fallback / optional)
-    OPENAI_API_KEY: str = ""
-    OPENAI_MODEL: str = "gpt-4o-mini"
+    # ── CORS ────────────────────────────────────────────────────────────────
+    CORS_ORIGINS: list[str] = os.getenv(
+        "CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"
+    ).split(",")
 
-    # Which provider to use: "gemini" | "openai"
-    AI_PROVIDER: str = "gemini"
-
-    # ─── File Uploads ──────────────────────────────────────────────────────
-    # Max resume file size in bytes (default 5 MB)
-    MAX_UPLOAD_SIZE_BYTES: int = 5 * 1024 * 1024
-    ALLOWED_RESUME_EXTENSIONS: List[str] = [".pdf", ".docx", ".doc"]
-    RESUME_UPLOAD_DIR: str = "static/resumes"
-    GENERAL_UPLOAD_DIR: str = "static/uploads"
-
-    # ─── CORS ──────────────────────────────────────────────────────────────
-    # Comma-separated origins in .env, e.g. CORS_ORIGINS=http://localhost:3000,https://myapp.com
-    CORS_ORIGINS: List[str] = [
-        "http://localhost:3000",   # React dev server
-        "http://localhost:5173",   # Vite dev server
-    ]
-
-    # ─── ATS Scoring ───────────────────────────────────────────────────────
-    # Minimum ATS score to consider a resume "good" (0-100)
-    ATS_PASSING_SCORE: int = 70
-
-    # ─── Pydantic Settings ─────────────────────────────────────────────────
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        case_sensitive=True,
-        extra="ignore",
-    )
+    # ── Static / uploads ────────────────────────────────────────────────────
+    UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", str(Path(__file__).resolve().parent.parent / "static" / "uploads"))
+    RESUME_DIR: str = os.getenv("RESUME_DIR", str(Path(__file__).resolve().parent.parent / "static" / "resumes"))
 
 
-# Single shared instance — import this everywhere
-settings = Settings()
+settings = _Settings()
