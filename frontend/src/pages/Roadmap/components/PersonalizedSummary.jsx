@@ -277,7 +277,7 @@ export default function PersonalizedSummary({
             </div>
 
             <div style={{ background: 'var(--bg-surface-3)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border)', textAlign: 'center' }}>
-              <span style={{ fontSize: '22px', fontWeight 800, color: '#ec4899', display: 'block' }}>
+              <span style={{ fontSize: '22px', fontWeight: 800, color: '#ec4899', display: 'block' }}>
                 {metrics.weakAreas.length}
               </span>
               <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Weak Areas</span>

@@ -15,7 +15,7 @@ import {
   FresherTemplate,
 } from './ResumeTemplates';
 import { SECTION_SCHEMA } from './sectionSchema';
-import { RepeatingSection } from './sectionSchema';
+import { RepeatingSection } from './sectionSchema.jsx';
 
 export default function Resume() {
   const [activeTab, setActiveTab] = useState('builder'); // 'builder' | 'analyzer'

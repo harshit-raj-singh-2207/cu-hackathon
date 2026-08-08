@@ -279,7 +279,7 @@ export default function PortfolioAnalyzer() {
                 </div>
 
                 <div style={s.scoreBox}>
-                  <span style={{ fontSize: '28px', fontWeight 900, color: '#f59e0b', display: 'block' }}>
+                  <span style={{ fontSize: '28px', fontWeight: 900, color: '#f59e0b', display: 'block' }}>
                     {analysisResult.scorecard.categoryScores.readmeQuality}/100
                   </span>
                   <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>README Quality</span>
