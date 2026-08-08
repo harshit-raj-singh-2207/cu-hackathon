@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
-import Modal from '../../components/Modal';
 import { githubService } from '../../services/githubService';
 import { portfolioAnalyzerService } from '../../services/portfolioAnalyzerService';
 import { careerPlanStorage } from '../../services/careerPlanStorage';
@@ -26,7 +25,6 @@ export default function PortfolioAnalyzer() {
   // History & Demo State
   const [history, setHistory] = useState([]);
   const [isDemoMode, setIsDemoMode] = useState(false);
-  const [selectedHistoryItem, setSelectedHistoryItem] = useState(null);
 
   useEffect(() => {
     const demo = careerPlanStorage.isDemoActive();

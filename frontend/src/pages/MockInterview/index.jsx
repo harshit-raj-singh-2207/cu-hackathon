@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
-import Modal from '../../components/Modal';
 import VoiceRecorder from './components/VoiceRecorder';
 import { aiInterviewService } from '../../services/aiInterviewService';
-import { speechService } from '../../services/speechService';
 import { careerPlanStorage } from '../../services/careerPlanStorage';
 import {
   evaluateFinalInterviewReport,
@@ -36,7 +34,6 @@ export default function MockInterview() {
 
   // History State
   const [history, setHistory] = useState([]);
-  const [selectedHistoryItem, setSelectedHistoryItem] = useState(null);
   const [finalReport, setFinalReport] = useState(null);
 
   useEffect(() => {

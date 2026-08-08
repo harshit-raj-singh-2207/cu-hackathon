@@ -14,7 +14,6 @@ export const generateProgressReportPDF = ({
   });
 
   const userName = user?.name || 'Developer';
-  const userEmail = user?.email || 'developer@example.com';
   const dateStr = new Date().toISOString().slice(0, 10);
 
   const pageWidth = doc.internal.pageSize.getWidth();
