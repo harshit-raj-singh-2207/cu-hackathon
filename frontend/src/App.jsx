@@ -82,15 +82,12 @@ const AuthLayout = () => (
 );
 
 const DashboardLayout = () => {
-  const location = useLocation();
-  const isCoding = location.pathname.startsWith('/coding');
-
   return (
     <div style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden', background: 'var(--bg-base, #f0f6ff)' }}>
       <Sidebar />
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, overflow: 'hidden' }}>
-        {!isCoding && <Navbar />}
-        <main style={isCoding ? S.codingMain : S.dashMain}>
+        <Navbar />
+        <main style={S.dashMain}>
           <Outlet />
         </main>
       </div>
@@ -130,7 +127,6 @@ export default function App() {
           <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
             <Route path="/dashboard" element={<P C={Dashboard} />} />
             <Route path="/resume" element={<P C={Resume} />} />
-            <Route path="/ats" element={<P C={ATS} />} />
             <Route path="/interview" element={<P C={Interview} />} />
             <Route path="/mock-interview" element={<P C={MockInterview} />} />
             <Route path="/interview/session/:sessionId" element={<P C={MockInterview} />} />
