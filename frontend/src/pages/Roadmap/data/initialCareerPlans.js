@@ -71,7 +71,14 @@ export const DEFAULT_CAREER_PLANS = [
     deadline: 'Medium-Term',
     goal: 'Frontend Specialist',
     description: 'Architect modular single-page applications with React 18 concurrent features, state reducers, and performant custom hooks.',
-    attachment: null,
+    attachment: {
+      id: 'att-103',
+      name: 'React_30Day_Certification.png',
+      type: 'image',
+      url: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=600&auto=format&fit=crop&q=80',
+      uploadedAt: '2026-08-05T11:00:00Z',
+      notes: 'Completed 30-Day React & Redux Toolkit Intensive Certification with 100% score.'
+    },
     resources: [
       { type: 'Doc', name: 'React concurrent compiler specs', href: 'https://react.dev' },
       { type: 'Video', name: 'Optimizing render hooks & state reducers', href: 'https://youtube.com' }
