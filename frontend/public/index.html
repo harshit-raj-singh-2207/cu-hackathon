@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#2563eb" />
+    <meta name="description" content="CareerCopilot — AI-powered career platform with resume builder, ATS checker, mock interviews, coding practice, and job recommendations." />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <title>CareerCopilot — AI Career Platform</title>
+    <style>
+      /* Splash screen */
+      #splash {
+        position: fixed; inset: 0; z-index: 9999;
+        background: #f0f6ff;
+        display: flex; align-items: center; justify-content: center; flex-direction: column;
+        font-family: 'Inter', sans-serif;
+        transition: opacity 0.4s ease;
+      }
+      #splash.hidden { opacity: 0; pointer-events: none; }
+      #splash .logo { font-size: 36px; font-weight: 800; color: #2563eb; letter-spacing: -0.03em; }
+      #splash .bar { width: 120px; height: 3px; background: #e2e8f0; border-radius: 3px; margin-top: 20px; overflow: hidden; }
+      #splash .bar::after {
+        content: ''; display: block; width: 40%; height: 100%; background: linear-gradient(90deg, #2563eb, #0ea5e9);
+        border-radius: 3px; animation: splash-load 1.2s ease infinite;
+      }
+      @keyframes splash-load { 0% { transform: translateX(-100%); } 100% { transform: translateX(350%); } }
+    </style>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run CareerCopilot.</noscript>
+    <div id="splash">
+      <div class="logo">CareerCopilot</div>
+      <div class="bar"></div>
+    </div>
+    <div id="root"></div>
+    <script>
+      window.__hideSplash = function() {
+        var el = document.getElementById('splash');
+        if (el) { el.classList.add('hidden'); setTimeout(function() { el.remove(); }, 400); }
+      };
+    </script>
+  </body>
+</html>
