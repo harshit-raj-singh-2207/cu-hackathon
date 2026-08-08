@@ -1,5 +1,4 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import Card from '../../components/Card';
 import Button from '../../components/Button';
 import '../../styles/coding.css';
 

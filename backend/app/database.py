@@ -22,10 +22,13 @@ async def connect_to_mongo() -> None:
     _database = _client[settings.MONGODB_DB_NAME]
 
     # Create indexes that the app depends on
-    await _database["users"].create_index("email", unique=True)
-    await _database["token_blacklist"].create_index("expires_at", expireAfterSeconds=0)
+    try:
+        await _database["users"].create_index("email", unique=True)
+        await _database["token_blacklist"].create_index("expires_at", expireAfterSeconds=0, name="token_blacklist_ttl")
+    except Exception as e:
+        print(f"[!] Index creation notice: {e}")
 
-    print(f"✅  Connected to MongoDB: {settings.MONGODB_DB_NAME}")
+    print(f"[+] Connected to MongoDB: {settings.MONGODB_DB_NAME}")
 
 
 async def close_mongo_connection() -> None:
@@ -35,7 +38,7 @@ async def close_mongo_connection() -> None:
         _client.close()
         _client = None
         _database = None
-        print("🔌  MongoDB connection closed.")
+        print("[-] MongoDB connection closed.")
 
 
 def get_database() -> AsyncIOMotorDatabase:
