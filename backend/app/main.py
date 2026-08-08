@@ -46,7 +46,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Health check (used by frontend authService.js) ─────────────────────────────
+# ── Health check & Root ───────────────────────────────────────────────────────
+
+@app.get("/", tags=["Health"])
+async def root_check():
+    return {
+        "status": "ok",
+        "service": settings.PROJECT_NAME,
+        "docs": "/docs",
+        "api_v1": settings.API_V1_STR
+    }
 
 @app.get("/health", tags=["Health"])
 async def health_check():
