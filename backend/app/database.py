@@ -1,87 +1,60 @@
+"""
+Async MongoDB connection via Motor.
+
+Usage across the app::
+
+    from app.database import get_database
+    db = get_database()
+    users = await db["users"].find_one({"email": email})
+"""
+
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from app.config import settings
 
-# ─── Module-level client holder ────────────────────────────────────────────────
-# Populated on startup, torn down on shutdown (see lifespan in main.py)
 _client: AsyncIOMotorClient | None = None
+_database: AsyncIOMotorDatabase | None = None
 
 
-# ─── Lifecycle helpers (called from main.py lifespan) ──────────────────────────
+async def connect_to_mongo() -> None:
+    """Open the Motor client and select the database.  Called once at startup."""
+    global _client, _database
+    _client = AsyncIOMotorClient(settings.MONGODB_URL)
+    _database = _client[settings.MONGODB_DB_NAME]
 
-async def connect_db() -> None:
-    """Create the Motor client and verify the connection."""
-    global _client
-    try:
-        _client = AsyncIOMotorClient(settings.MONGODB_URL)
-        await _client.admin.command("ping")
-        print(f"Connected to MongoDB database: {settings.DATABASE_NAME}")
-    except Exception as e:
-        print(f"Warning: Primary MongoDB connection failed ({e}). Attempting local fallback...")
-        try:
-            _client = AsyncIOMotorClient("mongodb://localhost:27017", serverSelectionTimeoutMS=2000)
-            await _client.admin.command("ping")
-            print("Connected to fallback local MongoDB database.")
-        except Exception as err:
-            print(f"Offline Mode: All MongoDB database connections failed ({err}). Database operations will be mocked.")
-            _client = AsyncIOMotorClient("mongodb://localhost:27017", serverSelectionTimeoutMS=1000)
+    # Create indexes that the app depends on
+    await _database["users"].create_index("email", unique=True)
+    await _database["token_blacklist"].create_index("expires_at", expireAfterSeconds=0)
+
+    print(f"✅  Connected to MongoDB: {settings.MONGODB_DB_NAME}")
 
 
-async def close_db() -> None:
-    """Close the Motor client gracefully."""
-    global _client
+async def close_mongo_connection() -> None:
+    """Gracefully shut down the Motor client.  Called once at shutdown."""
+    global _client, _database
     if _client is not None:
         _client.close()
         _client = None
-        print("MongoDB connection closed.")
+        _database = None
+        print("🔌  MongoDB connection closed.")
 
-
-# ─── Dependency / accessor ─────────────────────────────────────────────────────
 
 def get_database() -> AsyncIOMotorDatabase:
-    """
-    Return the active database instance.
-
-    Usage in a route:
-        db: AsyncIOMotorDatabase = Depends(get_database)
-
-    Usage outside a route (services, etc.):
-        from app.database import get_database
-        db = get_database()
-    """
-    if _client is None:
+    """Return the active database handle (non-async, used as a synchronous getter)."""
+    if _database is None:
         raise RuntimeError(
-            "Database client is not initialised. "
-            "Make sure connect_db() is called during app startup."
+            "Database is not initialised — call connect_to_mongo() first "
+            "(this should happen automatically at FastAPI startup)."
         )
-    return _client[settings.DATABASE_NAME]
-
-
-# ─── Collection accessors ──────────────────────────────────────────────────────
-# Thin helpers so services never hard-code collection names.
-
-def get_users_collection():
-    return get_database()["users"]
-
+    return _database
 
 def get_resumes_collection():
     return get_database()["resumes"]
 
-
 def get_ats_results_collection():
     return get_database()["ats_results"]
 
+class DBHelper:
+    def get_db(self):
+        return get_database()
 
-def get_interviews_collection():
-    return get_database()["interviews"]
-
-
-def get_coding_collection():
-    return get_database()["coding_sessions"]
-
-
-def get_jobs_collection():
-    return get_database()["jobs"]
-
-
-def get_analytics_collection():
-    return get_database()["analytics"]
+db_helper = DBHelper()
