@@ -404,22 +404,20 @@
 
 /* Elite Bounty: Personalized Summary Banner */
 .personalized-summary-banner {
-  background: rgba(15, 23, 42, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--bg-surface);
   border: 1px solid var(--border-brand);
   border-radius: var(--radius-lg);
   padding: var(--space-5);
   margin-bottom: var(--space-6);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-card);
 }
 
 .summary-icon-glow {
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(34, 211, 238, 0.25));
-  border: 1px solid rgba(139, 92, 246, 0.4);
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(14, 165, 233, 0.1));
+  border: 1px solid var(--border-brand);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -427,8 +425,8 @@
 }
 
 .next-action-banner {
-  background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9));
-  border: 1px solid rgba(139, 92, 246, 0.3);
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-brand);
   border-radius: var(--radius-md);
   padding: var(--space-4);
 }
