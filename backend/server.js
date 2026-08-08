@@ -4,19 +4,18 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import axios from 'axios';
 import vm from 'vm';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Load static fallback problems
 let staticProblems = [];
@@ -34,19 +33,22 @@ try {
 const mongoUris = [
   process.env.MONGODB_URI2,
   process.env.MONGODB_URI,
-  'mongodb://127.0.0.1:27017/Ai-Career-copilot'
+  'mongodb://127.0.0.1:27017/ai-career-copilot'
 ].filter(Boolean);
 
 async function connectToDatabase() {
-  for (const u of mongoUris) {
+  for (let i = 0; i < mongoUris.length; i++) {
+    const u = mongoUris[i];
     try {
       await mongoose.connect(u, { serverSelectionTimeoutMS: 4000 });
-      console.log(`✅ Connected to MongoDB Atlas (${u.includes('MONGODB_URI2') ? 'URI2' : 'Primary'})`);
+      const label = i === 0 && process.env.MONGODB_URI2 ? 'URI2' : 'Primary';
+      console.log(`✅ Connected to MongoDB (${label}): ${u.split('@').pop()}`);
       return;
     } catch (err) {
-      console.warn(`⚠️ MongoDB connection warning for URI:`, err.message);
+      console.warn(`⚠️ MongoDB connection failed for URI[${i}]:`, err.message);
     }
   }
+  console.error('❌ All MongoDB URIs failed. Running without DB (static fallback active).');
 }
 
 connectToDatabase();
@@ -86,25 +88,18 @@ const ProblemSchema = new mongoose.Schema({
 
 const Problem = mongoose.models.Problem || mongoose.model('Problem', ProblemSchema);
 
-// Language ID Mapping for Judge0 (All Languages Supported)
+// Language ID Mapping for Judge0
 const LANGUAGE_IDS = {
-  javascript: 63,
-  js: 63,
-  node: 63,
-  python: 71,
-  py: 71,
-  python3: 71,
-  cpp: 54,
-  'c++': 54,
+  javascript: 63, js: 63, node: 63,
+  python: 71, py: 71, python3: 71,
+  cpp: 54, 'c++': 54,
   c: 50,
   java: 62,
-  csharp: 51,
-  'c#': 51,
+  csharp: 51, 'c#': 51,
   go: 60,
   rust: 73,
   ruby: 72,
-  typescript: 74,
-  ts: 74,
+  typescript: 74, ts: 74,
   php: 68,
   swift: 83,
   kotlin: 78
@@ -120,18 +115,15 @@ const apiKey = process.env.GEMINI_API_KEY || process.env.AI_API_KEY;
 if (apiKey) {
   try {
     genAI = new GoogleGenerativeAI(apiKey);
-    aiModel = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
-    console.log("✅ GoogleGenerativeAI Initialized with gemini-3.6-flash");
+    aiModel = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    console.log('✅ GoogleGenerativeAI Initialized with gemini-1.5-flash');
   } catch (err) {
-    console.warn("⚠️ Gemini AI Init warning:", err.message);
+    console.warn('⚠️ Gemini AI Init warning:', err.message);
   }
 }
 
 // -----------------------------------------------------------------------------
-// 3. UNIVERSAL MULTI-LANGUAGE DRIVER & CODE EVALUATOR
-// -----------------------------------------------------------------------------
-// -----------------------------------------------------------------------------
-// 3. SECURE ONLINE JUDGE ENGINE & DYNAMIC RUNNER HARNESS
+// 3. CODE EXECUTION ENGINE
 // -----------------------------------------------------------------------------
 
 function sanitizeErrorLog(errStr = '') {
@@ -192,7 +184,6 @@ function formatCodeForLanguage(userCode, language = 'javascript', input = '') {
   const lang = (language || 'javascript').toLowerCase();
   const code = (userCode || '').trim();
 
-  // If user code already has main entrypoint, wrap inside safe execution wrapper
   if (/int\s+main\s*\(|def\s+main\(|public\s+static\s+void\s+main/i.test(code)) {
     return code;
   }
@@ -295,7 +286,7 @@ if __name__ == '__main__':
   }
 
   if (lang === 'java') {
-    const match = code.match(/public\s+[a-zA-Z0-9_<>[\]]+\s+([a-zA-Z0-9_$]+)\s*\(/);
+    const match = code.match(/public\s+[a-zA-Z0-9_<>\[\]]+\s+([a-zA-Z0-9_$]+)\s*\(/);
     let fnName = 'twoSum';
     if (match) fnName = match[1];
 
@@ -382,7 +373,7 @@ try {
   return code;
 }
 
-function evaluateJsUserCode(userCode, testInput = '', expectedOutput = '') {
+function evaluateJsUserCode(userCode, testInput = '') {
   const codeWithoutComments = userCode.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '').trim();
   const hasReturnStatement = /\breturn\b/.test(codeWithoutComments);
 
@@ -395,7 +386,6 @@ function evaluateJsUserCode(userCode, testInput = '', expectedOutput = '') {
     };
   }
 
-  // Parse arguments from testInput
   let parsedArgs = [];
   try {
     if (testInput && testInput.includes('=')) {
@@ -431,7 +421,6 @@ function evaluateJsUserCode(userCode, testInput = '', expectedOutput = '') {
   };
 
   try {
-    // Extract actual function name from code without JSDoc comments
     const fnMatch = codeWithoutComments.match(/(?:function\s+([a-zA-Z0-9_$]+)|(?:var|let|const)\s+([a-zA-Z0-9_$]+)\s*=)/);
     const targetFnName = fnMatch ? (fnMatch[1] || fnMatch[2]) : '';
     const argsJson = JSON.stringify(parsedArgs);
@@ -443,7 +432,6 @@ function evaluateJsUserCode(userCode, testInput = '', expectedOutput = '') {
       let argsToPass = ${argsJson};
       let fnToCall = null;
 
-      // 1. Check target function name matched from clean code
       if ("${targetFnName}") {
         try {
           if (typeof eval("${targetFnName}") === 'function') {
@@ -452,7 +440,6 @@ function evaluateJsUserCode(userCode, testInput = '', expectedOutput = '') {
         } catch(e) {}
       }
 
-      // 2. Check class Solution
       if (!fnToCall && typeof Solution !== 'undefined') {
         try {
           const sol = new Solution();
@@ -461,7 +448,6 @@ function evaluateJsUserCode(userCode, testInput = '', expectedOutput = '') {
         } catch(e) {}
       }
 
-      // 3. Fallback search for any user-defined function in global scope
       if (!fnToCall) {
         const builtinKeys = new Set(['console', 'Math', 'Array', 'Object', 'String', 'Number', 'Boolean', 'Map', 'Set', 'JSON', 'parseInt', 'parseFloat', 'eval', 'Function', 'actualReturnValue', 'argsToPass', 'fnToCall']);
         for (let key in this) {
@@ -528,95 +514,69 @@ async function executeCodeUniversal(userCode, language = 'javascript', input = '
   const languageId = LANGUAGE_IDS[langKey] || 63;
   const formattedCode = formatCodeForLanguage(userCode, langKey, input);
 
-  // 1. RapidAPI Judge0 Extra CE Integration (User's RapidAPI Endpoint)
-  if (process.env.RAPIDAPI_KEY && !process.env.RAPIDAPI_KEY.includes('your_')) {
+  // 1. Judge0 via RapidAPI (uses JUDGE0_URL + RAPIDAPI_KEY from .env)
+  if (process.env.RAPIDAPI_KEY) {
+    const judgeHost = process.env.RAPIDAPI_HOST || 'judge0-ce.p.rapidapi.com';
+    const judgeBase = process.env.JUDGE0_URL || `https://${judgeHost}`;
     try {
-      const options = {
+      const response = await axios.request({
         method: 'POST',
-        url: 'https://judge0-extra-ce.p.rapidapi.com/submissions',
+        url: `${judgeBase}/submissions`,
         params: { wait: 'true', base64_encoded: 'false', fields: '*' },
         headers: {
-          'content-type': 'application/json',
           'Content-Type': 'application/json',
           'X-RapidAPI-Key': process.env.RAPIDAPI_KEY,
-          'X-RapidAPI-Host': process.env.RAPIDAPI_HOST || 'judge0-extra-ce.p.rapidapi.com'
+          'X-RapidAPI-Host': judgeHost
         },
-        data: {
-          language_id: languageId,
-          source_code: formattedCode,
-          stdin: input || ''
-        },
-        timeout: 10000,
+        data: { language_id: languageId, source_code: formattedCode, stdin: input || '' },
+        timeout: 12000,
         validateStatus: () => true
-      };
+      });
 
-      const response = await axios.request(options);
       const resData = response.data || {};
-      if (resData.status || resData.stdout || resData.stderr || resData.compile_output) {
+      if (resData.status || resData.stdout !== undefined || resData.stderr || resData.compile_output) {
         const stdout = (resData.stdout || '').trim();
-        const stderr = sanitizeErrorLog(resData.stderr || resData.compile_output || resData.message || resData.error || '');
-        const rawStatus = resData.status?.description || (stderr ? 'Compile Error' : 'Accepted');
-        const normalized = normalizeJudgeStatus(rawStatus, stderr);
-        const isPassed = normalized === 'ACCEPTED';
-
+        const stderr = sanitizeErrorLog(resData.stderr || resData.compile_output || resData.message || '');
+        const normalized = normalizeJudgeStatus(resData.status?.description || '', stderr);
+        console.log(`✅ Judge0 (${judgeHost}) executed — status: ${normalized}`);
         return {
-          passed: isPassed,
+          passed: normalized === 'ACCEPTED',
           status: normalized,
-          stdout: stdout,
-          stderr: stderr,
+          stdout,
+          stderr,
           executionTime: resData.time ? `${resData.time}s` : '0.04s',
           memory: resData.memory ? `${resData.memory} KB` : '12.4 MB'
         };
       }
     } catch (err) {
-      console.warn("RapidAPI Judge0 Extra CE notice:", err.message);
+      console.warn(`RapidAPI Judge0 notice (${judgeHost}):`, err.message);
     }
   }
 
-  // 2. Free Open Source Judge0 CE Fallback (ce.judge0.com)
-  const b64Code = Buffer.from(formattedCode).toString('base64');
-  const b64Stdin = input ? Buffer.from(input).toString('base64') : '';
-  const endpoints = [
-    'https://ce.judge0.com/submissions?wait=true&base64_encoded=true',
-    process.env.JUDGE0_URL ? `${process.env.JUDGE0_URL}/submissions?wait=true&base64_encoded=true` : null
-  ].filter(Boolean);
-
-  for (const ep of endpoints) {
-    try {
-      const headers = { 'content-type': 'application/json' };
-      const response = await axios.post(
-        ep,
-        {
-          source_code: b64Code,
-          language_id: languageId,
-          stdin: b64Stdin,
-          cpu_time_limit: 2.0,
-          wall_time_limit: 3.0,
-          memory_limit: 128000
-        },
-        { headers, timeout: 8000, validateStatus: () => true }
-      );
-
-      const resData = response.data || {};
-      const stdout = decodeB64(resData.stdout);
-      const stderr = sanitizeErrorLog(decodeB64(resData.stderr || resData.compile_output || resData.message || resData.error));
-      const rawStatus = resData.status?.description || (stderr ? 'Compile Error' : 'Accepted');
-      const normalized = normalizeJudgeStatus(rawStatus, stderr);
-      const isPassed = normalized === 'ACCEPTED';
-
-      return {
-        passed: isPassed,
-        status: normalized,
-        stdout: stdout,
-        stderr: stderr,
-        executionTime: resData.time ? `${resData.time}s` : '0.04s',
-        memory: resData.memory ? `${resData.memory} KB` : '12.4 MB'
-      };
-    } catch (err) {
-      console.warn(`Judge0 CE notice (${ep}):`, err.message);
-    }
+  // 2. Free public Judge0 CE fallback (no API key needed)
+  try {
+    const b64Code = Buffer.from(formattedCode).toString('base64');
+    const b64Stdin = input ? Buffer.from(input).toString('base64') : '';
+    const response = await axios.post(
+      'https://ce.judge0.com/submissions?wait=true&base64_encoded=true',
+      { source_code: b64Code, language_id: languageId, stdin: b64Stdin, cpu_time_limit: 2.0, wall_time_limit: 3.0, memory_limit: 128000 },
+      { headers: { 'content-type': 'application/json' }, timeout: 8000, validateStatus: () => true }
+    );
+    const resData = response.data || {};
+    const stdout = decodeB64(resData.stdout);
+    const stderr = sanitizeErrorLog(decodeB64(resData.stderr || resData.compile_output || resData.message || ''));
+    const normalized = normalizeJudgeStatus(resData.status?.description || '', stderr);
+    return {
+      passed: normalized === 'ACCEPTED',
+      status: normalized, stdout, stderr,
+      executionTime: resData.time ? `${resData.time}s` : '0.04s',
+      memory: resData.memory ? `${resData.memory} KB` : '12.4 MB'
+    };
+  } catch (err) {
+    console.warn('Free Judge0 CE fallback notice:', err.message);
   }
 
+  // 3. Local JS sandbox fallback
   if (langKey === 'javascript' || langKey === 'js') {
     return evaluateJsUserCode(userCode, input);
   }
@@ -632,89 +592,12 @@ async function executeCodeUniversal(userCode, language = 'javascript', input = '
 }
 
 // -----------------------------------------------------------------------------
-// 4. API ROUTES & DEDICATED JUDGE ENDPOINTS
+// 4. HELPER FUNCTIONS
 // -----------------------------------------------------------------------------
-
-// Fetch all problems with instant DB + Static Fallback
-app.get('/api/problems', async (req, res) => {
-  const search = (req.query.search || '').trim().toLowerCase();
-  const difficulty = (req.query.difficulty || 'ALL').toUpperCase();
-  const category = (req.query.category || 'ALL').toUpperCase();
-
-  let problems = [];
-
-  if (mongoose.connection.readyState === 1) {
-    try {
-      const filter = {};
-      if (search) {
-        filter.$or = [
-          { title: { $regex: search, $options: 'i' } },
-          { category: { $regex: search, $options: 'i' } }
-        ];
-      }
-      if (difficulty !== 'ALL') {
-        filter.difficulty = { $regex: new RegExp(`^${difficulty}$`, 'i') };
-      }
-      if (category !== 'ALL') {
-        filter.category = { $regex: new RegExp(`^${category}$`, 'i') };
-      }
-
-      problems = await Problem.find(filter).maxTimeMS(3000);
-    } catch (err) {
-      console.warn("DB problem query notice:", err.message);
-    }
-  }
-
-  if (!problems || problems.length === 0) {
-    problems = staticProblems.filter((p) => {
-      const matchesSearch = !search || p.title?.toLowerCase().includes(search) || p.category?.toLowerCase().includes(search);
-      const matchesDiff = difficulty === 'ALL' || (p.difficulty || 'EASY').toUpperCase() === difficulty;
-      const matchesCat = category === 'ALL' || (p.category || '').toUpperCase() === category;
-      return matchesSearch && matchesDiff && matchesCat;
-    });
-  }
-
-  res.json({ success: true, data: problems, problems: problems });
-});
-
-// Fetch single problem details with instant DB + Static Fallback
-app.get('/api/problems/:id', async (req, res) => {
-  const { id } = req.params;
-  let problem = null;
-
-  if (mongoose.connection.readyState === 1) {
-    try {
-      if (mongoose.Types.ObjectId.isValid(id)) {
-        problem = await Problem.findById(id).maxTimeMS(3000);
-      } else {
-        problem = await Problem.findOne({ title: { $regex: id, $options: 'i' } }).maxTimeMS(3000);
-      }
-    } catch (err) {
-      console.warn("DB single problem query notice:", err.message);
-    }
-  }
-
-  if (problem && typeof problem.toObject === 'function') {
-    problem = problem.toObject();
-  }
-
-  if (!problem && staticProblems.length > 0) {
-    problem = staticProblems.find((p) => p._id === id || p.id === id || p.title?.toLowerCase().includes(id.toLowerCase())) || staticProblems[0];
-  }
-
-  if (!problem) {
-    return res.status(404).json({ success: false, message: 'Problem not found' });
-  }
-
-  res.json({ success: true, data: problem, ...problem });
-});
-
-
 
 function outputsMatch(actualStr, expectedStr, inputStr = '') {
   if (actualStr === undefined || actualStr === null) return false;
 
-  // Extract the clean output line (ignoring any preceding console.log lines)
   const lines = String(actualStr).trim().split('\n').filter(Boolean);
   const cleanActual = lines[lines.length - 1] || String(actualStr);
 
@@ -748,18 +631,16 @@ function outputsMatch(actualStr, expectedStr, inputStr = '') {
         }
       }
     }
-    if (typeof act === 'boolean' && typeof exp === 'boolean') {
-      return act === exp;
-    }
-    if (typeof act === 'number' && typeof exp === 'number') {
-      return act === exp;
-    }
+    if (typeof act === 'boolean' && typeof exp === 'boolean') return act === exp;
+    if (typeof act === 'number' && typeof exp === 'number') return act === exp;
   } catch (e) {}
 
   return false;
 }
 
-const ALLOWED_LANGUAGES = new Set([54, 62, 71, 63, 74]); // C++ (54), Java (62), Python (71), JS (63), Go (74)
+// Allowed language IDs for the judge endpoint
+// C++ (54), Java (62), Python (71), JavaScript (63), TypeScript (74)
+const ALLOWED_LANGUAGES = new Set([54, 62, 71, 63, 74]);
 const MAX_CODE_LENGTH = 10000;
 
 const LANG_NAME_TO_ID = {
@@ -767,10 +648,86 @@ const LANG_NAME_TO_ID = {
   python: 71, python3: 71, py: 71,
   cpp: 54, 'c++': 54,
   java: 62,
-  go: 74, golang: 74
+  typescript: 74, ts: 74
 };
 
-// POST /api/judge/run (Run Button Endpoint)
+// -----------------------------------------------------------------------------
+// 5. ROUTE HANDLERS
+// -----------------------------------------------------------------------------
+
+// GET /api/problems — Fetch all problems
+app.get('/api/problems', async (req, res) => {
+  const search = (req.query.search || '').trim().toLowerCase();
+  const difficulty = (req.query.difficulty || 'ALL').toUpperCase();
+  const category = (req.query.category || 'ALL').toUpperCase();
+
+  let problems = [];
+
+  if (mongoose.connection.readyState === 1) {
+    try {
+      const filter = {};
+      if (search) {
+        filter.$or = [
+          { title: { $regex: search, $options: 'i' } },
+          { category: { $regex: search, $options: 'i' } }
+        ];
+      }
+      if (difficulty !== 'ALL') filter.difficulty = { $regex: new RegExp(`^${difficulty}$`, 'i') };
+      if (category !== 'ALL') filter.category = { $regex: new RegExp(`^${category}$`, 'i') };
+
+      problems = await Problem.find(filter).maxTimeMS(3000);
+    } catch (err) {
+      console.warn("DB problem query notice:", err.message);
+    }
+  }
+
+  if (!problems || problems.length === 0) {
+    problems = staticProblems.filter((p) => {
+      const matchesSearch = !search || p.title?.toLowerCase().includes(search) || p.category?.toLowerCase().includes(search);
+      const matchesDiff = difficulty === 'ALL' || (p.difficulty || 'EASY').toUpperCase() === difficulty;
+      const matchesCat = category === 'ALL' || (p.category || '').toUpperCase() === category;
+      return matchesSearch && matchesDiff && matchesCat;
+    });
+  }
+
+  res.json({ success: true, data: problems, problems });
+});
+
+// GET /api/problems/:id — Fetch single problem
+app.get('/api/problems/:id', async (req, res) => {
+  const { id } = req.params;
+  let problem = null;
+
+  if (mongoose.connection.readyState === 1) {
+    try {
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        problem = await Problem.findById(id).maxTimeMS(3000);
+      } else {
+        problem = await Problem.findOne({ title: { $regex: id, $options: 'i' } }).maxTimeMS(3000);
+      }
+    } catch (err) {
+      console.warn("DB single problem query notice:", err.message);
+    }
+  }
+
+  if (problem && typeof problem.toObject === 'function') {
+    problem = problem.toObject();
+  }
+
+  if (!problem && staticProblems.length > 0) {
+    problem = staticProblems.find(
+      (p) => p._id === id || p.id === id || p.title?.toLowerCase().includes(id.toLowerCase())
+    ) || staticProblems[0];
+  }
+
+  if (!problem) {
+    return res.status(404).json({ success: false, message: 'Problem not found' });
+  }
+
+  res.json({ success: true, data: problem, ...problem });
+});
+
+// POST /api/judge/run — Run code against sample test case
 const handleJudgeRun = async (req, res) => {
   try {
     const { source_code, code, language_id, language, lang, input = '', stdin, problem_id, problemId, id } = req.body;
@@ -778,57 +735,39 @@ const handleJudgeRun = async (req, res) => {
     const targetId = problem_id || problemId || id;
     const runInput = input || stdin || '';
 
-    // 1. Check for missing body
     if (!req.body || Object.keys(req.body).length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: "Bad Request",
-        message: "Request body cannot be empty."
-      });
+      return res.status(400).json({ success: false, error: "Bad Request", message: "Request body cannot be empty." });
     }
 
-    // 2. Validate source_code
     if (typeof userCode !== "string" || !userCode) {
-      return res.status(400).json({
-        success: false,
-        error: "Validation Error",
-        message: "Field 'source_code' or 'code' is required and must be a non-empty string."
-      });
+      return res.status(400).json({ success: false, error: "Validation Error", message: "Field 'source_code' or 'code' is required and must be a non-empty string." });
     }
 
     if (userCode.length > MAX_CODE_LENGTH) {
-      return res.status(400).json({
-        success: false,
-        error: "Validation Error",
-        message: `Source code exceeds the maximum allowed length of ${MAX_CODE_LENGTH} characters.`
-      });
+      return res.status(400).json({ success: false, error: "Validation Error", message: `Source code exceeds the maximum allowed length of ${MAX_CODE_LENGTH} characters.` });
     }
 
-    // 3. Validate language_id / language
     let parsedLanguageId = language_id ? Number(language_id) : null;
     if (!parsedLanguageId && (language || lang)) {
-      const lKey = (language || lang).toLowerCase();
-      parsedLanguageId = LANG_NAME_TO_ID[lKey] || 63;
+      parsedLanguageId = LANG_NAME_TO_ID[(language || lang).toLowerCase()] || 63;
     }
-
     if (!parsedLanguageId || !ALLOWED_LANGUAGES.has(parsedLanguageId)) {
-      parsedLanguageId = 63; // Default to JavaScript 63 if not mapped
+      parsedLanguageId = 63;
     }
 
-    // Look up problem to get proper testcase input if input not explicitly sent
     let problem = null;
     if (mongoose.connection.readyState === 1 && targetId) {
       try {
-        if (mongoose.Types.ObjectId.isValid(targetId)) {
-          problem = await Problem.findById(targetId).maxTimeMS(3000);
-        } else if (targetId) {
-          problem = await Problem.findOne({ title: { $regex: targetId, $options: 'i' } }).maxTimeMS(3000);
-        }
+        problem = mongoose.Types.ObjectId.isValid(targetId)
+          ? await Problem.findById(targetId).maxTimeMS(3000)
+          : await Problem.findOne({ title: { $regex: targetId, $options: 'i' } }).maxTimeMS(3000);
       } catch (e) {}
     }
 
     if (!problem && targetId && staticProblems.length > 0) {
-      problem = staticProblems.find((p) => String(p._id) === String(targetId) || String(p.id) === String(targetId) || p.title?.toLowerCase().includes(String(targetId).toLowerCase()));
+      problem = staticProblems.find(
+        (p) => String(p._id) === String(targetId) || String(p.id) === String(targetId) || p.title?.toLowerCase().includes(String(targetId).toLowerCase())
+      );
     }
 
     const testInput = runInput || problem?.testCases?.[0]?.input || problem?.examples?.[0]?.input || "nums = [2, 7, 11, 15], target = 9";
@@ -847,21 +786,14 @@ const handleJudgeRun = async (req, res) => {
       finalOutput = `Execution finished: Status = ${isMatched ? "ACCEPTED" : evalResult.status}`;
     }
 
-    const results = [
-      {
-        input: testInput,
-        expected: expectedOut,
-        actual: evalResult.stdout || evalResult.stderr || "undefined",
-        passed: isMatched
-      }
-    ];
+    const results = [{ input: testInput, expected: expectedOut, actual: evalResult.stdout || evalResult.stderr || "undefined", passed: isMatched }];
 
     res.json({
       success: true,
       status: isMatched ? "ACCEPTED" : (evalResult.status === "COMPILE_ERROR" ? "COMPILE_ERROR" : "WRONG_ANSWER"),
       passedTestCases: isMatched ? 1 : 0,
       totalTestCases: 1,
-      results: results,
+      results,
       testCasesResult: results,
       stdout: evalResult.stdout,
       stderr: evalResult.stderr,
@@ -870,29 +802,24 @@ const handleJudgeRun = async (req, res) => {
       memoryUsed: evalResult.memory || '12.4 MB'
     });
   } catch (error) {
-    console.error("Error in handleJudgeRun execution:", error);
+    console.error("Error in handleJudgeRun:", error);
     res.status(500).json({ success: false, error: "Internal Server Error", message: error.message });
   }
 };
 
-// POST /api/judge/submit (Submit Button Endpoint)
+// POST /api/judge/submit — Submit code against all test cases
 const handleJudgeSubmit = async (req, res) => {
   const { source_code, code, language_id, language, lang, problem_id, problemId, id } = req.body;
   const userCode = (source_code || code || '').trim();
   const targetId = problem_id || problemId || id;
 
   if (typeof userCode !== "string" || !userCode) {
-    return res.status(400).json({
-      success: false,
-      error: "Validation Error",
-      message: "Field 'source_code' or 'code' is required and must be a non-empty string."
-    });
+    return res.status(400).json({ success: false, error: "Validation Error", message: "Field 'source_code' or 'code' is required and must be a non-empty string." });
   }
 
   let parsedLanguageId = language_id ? Number(language_id) : null;
   if (!parsedLanguageId && (language || lang)) {
-    const lKey = (language || lang).toLowerCase();
-    parsedLanguageId = LANG_NAME_TO_ID[lKey] || 63;
+    parsedLanguageId = LANG_NAME_TO_ID[(language || lang).toLowerCase()] || 63;
   }
   const selectedLang = Object.keys(LANG_NAME_TO_ID).find(key => LANG_NAME_TO_ID[key] === parsedLanguageId) || 'javascript';
 
@@ -900,19 +827,18 @@ const handleJudgeSubmit = async (req, res) => {
     let problem = null;
     if (mongoose.connection.readyState === 1 && targetId) {
       try {
-        if (mongoose.Types.ObjectId.isValid(targetId)) {
-          problem = await Problem.findById(targetId).maxTimeMS(3000);
-        } else if (targetId) {
-          problem = await Problem.findOne({ title: { $regex: targetId, $options: 'i' } }).maxTimeMS(3000);
-        }
+        problem = mongoose.Types.ObjectId.isValid(targetId)
+          ? await Problem.findById(targetId).maxTimeMS(3000)
+          : await Problem.findOne({ title: { $regex: targetId, $options: 'i' } }).maxTimeMS(3000);
       } catch (e) {}
     }
 
     if (!problem && staticProblems.length > 0) {
-      problem = staticProblems.find((p) => String(p._id) === String(targetId) || String(p.id) === String(targetId) || p.title?.toLowerCase().includes(String(targetId).toLowerCase())) || staticProblems[0];
+      problem = staticProblems.find(
+        (p) => String(p._id) === String(targetId) || String(p.id) === String(targetId) || p.title?.toLowerCase().includes(String(targetId).toLowerCase())
+      ) || staticProblems[0];
     }
 
-    // Extract valid test cases from problem object
     let baseCases = [];
     if (problem) {
       if (Array.isArray(problem.testCases) && problem.testCases.length > 0) {
@@ -920,14 +846,12 @@ const handleJudgeSubmit = async (req, res) => {
       } else if (Array.isArray(problem.examples) && problem.examples.length > 0) {
         baseCases = problem.examples.map(ex => ({
           input: ex.input,
-          expectedOutput: ex.output || ex.expectedOutput || ex.expected_output,
-          expected_output: ex.output || ex.expectedOutput || ex.expected_output
+          expectedOutput: ex.output || ex.expectedOutput || ex.expected_output
         }));
       } else if (Array.isArray(problem.sampleTestCases) && problem.sampleTestCases.length > 0) {
         baseCases = problem.sampleTestCases.map(stc => ({
           input: stc.input,
-          expectedOutput: stc.output || stc.expectedOutput,
-          expected_output: stc.output || stc.expectedOutput
+          expectedOutput: stc.output || stc.expectedOutput
         }));
       }
     }
@@ -943,13 +867,9 @@ const handleJudgeSubmit = async (req, res) => {
     const totalCount = 70;
     const fullTestCases = Array.from({ length: totalCount }, (_, i) => {
       const base = baseCases[i % baseCases.length];
-      return {
-        input: base.input,
-        expectedOutput: base.expectedOutput || base.expected_output || base.output || "[0, 1]"
-      };
+      return { input: base.input, expectedOutput: base.expectedOutput || base.expected_output || base.output || "[0, 1]" };
     });
 
-    // Fast Parallel Execution of 70 Test Cases using Promise.all
     const evalPromises = fullTestCases.map(tc => executeCodeUniversal(userCode, selectedLang, tc.input));
     const evalResults = await Promise.all(evalPromises);
 
@@ -964,37 +884,23 @@ const handleJudgeSubmit = async (req, res) => {
       const actual = evalRes.stdout || evalRes.stderr || '';
       const isMatch = outputsMatch(actual, tc.expectedOutput, tc.input);
 
-      results.push({
-        input: tc.input,
-        expected: tc.expectedOutput,
-        actual: actual,
-        passed: isMatch
-      });
+      results.push({ input: tc.input, expected: tc.expectedOutput, actual, passed: isMatch });
 
       if (isMatch) {
         passedCount++;
-      } else {
-        if (!failedTestCase) {
-          failedTestCase = {
-            testCaseIndex: idx + 1,
-            input: tc.input,
-            expected: tc.expectedOutput,
-            actual: actual
-          };
-          overallStatus = evalRes.status !== "ACCEPTED" && evalRes.status !== "Idle" ? evalRes.status : "WRONG_ANSWER";
-        }
+      } else if (!failedTestCase) {
+        failedTestCase = { testCaseIndex: idx + 1, input: tc.input, expected: tc.expectedOutput, actual };
+        overallStatus = evalRes.status !== "ACCEPTED" && evalRes.status !== "Idle" ? evalRes.status : "WRONG_ANSWER";
       }
     }
 
-    if (passedCount === totalCount) {
-      overallStatus = "ACCEPTED";
-    }
+    if (passedCount === totalCount) overallStatus = "ACCEPTED";
 
     res.json({
       success: true,
       status: overallStatus,
-      message: overallStatus === "ACCEPTED" 
-        ? `ACCEPTED 🎉: Passed all ${totalCount}/${totalCount} test cases!` 
+      message: overallStatus === "ACCEPTED"
+        ? `ACCEPTED 🎉: Passed all ${totalCount}/${totalCount} test cases!`
         : `${overallStatus} ❌: Passed ${passedCount}/${totalCount} test cases!`,
       passedTestCases: passedCount,
       totalTestCases: totalCount,
@@ -1014,30 +920,13 @@ const handleJudgeSubmit = async (req, res) => {
   }
 };
 
-// Unified Judge Execution Endpoint
-const handleProblemsExecute = async (req, res) => {
+// Unified judge endpoint — dispatches to run or submit
+const handleProblemsExecute = (req, res) => {
   const isSubmit = req.body.isSubmit || req.body.action === 'submit' || req.body.is_submit;
-  if (isSubmit) {
-    return handleJudgeSubmit(req, res);
-  } else {
-    return handleJudgeRun(req, res);
-  }
+  return isSubmit ? handleJudgeSubmit(req, res) : handleJudgeRun(req, res);
 };
 
-// Dedicated Online Judge API Endpoints
-app.post('/api/problems/execute', handleProblemsExecute);
-app.post('/api/judge/run', handleJudgeRun);
-app.post('/api/judge/submit', handleJudgeSubmit);
-
-// Backward Compatibility Aliases
-app.post('/api/execute', handleProblemsExecute);
-app.post('/api/run-code', handleProblemsExecute);
-app.post('/api/submit', handleJudgeSubmit);
-app.post('/api/submit-code', handleJudgeSubmit);
-app.post('/api/submit', handleJudgeSubmit);
-app.post('/api/submit-code', handleJudgeSubmit);
-
-// POST /api/ai/coach (Gemini AI Coach)
+// POST /api/ai/coach — Gemini AI Coach
 const handleAiCoach = async (req, res) => {
   const { action, actionType, customPrompt, query, problemTitle, problemDescription, userCode, code, history } = req.body;
   const act = (action || actionType || '').toLowerCase();
@@ -1078,13 +967,8 @@ BEHAVIOR RULES:
 
     if (apiKey) {
       const activeGenAI = genAI || new GoogleGenerativeAI(apiKey);
-      const modelsToTry = [
-        'gemini-3.6-flash',
-        'gemini-3.5-flash',
-        'gemini-2.5-flash',
-        'gemini-2.0-flash',
-        'gemini-1.5-flash'
-      ];
+      // Try models in order of preference (newest stable first)
+      const modelsToTry = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
 
       for (const mName of modelsToTry) {
         try {
@@ -1111,10 +995,9 @@ BEHAVIOR RULES:
           });
 
           const result = await chat.sendMessage(userMessage);
-          const response = await result.response;
-          responseText = response.text();
+          responseText = result.response.text();
           if (responseText) {
-            console.log(`✅ Successfully generated AI Coach response using model: ${mName}`);
+            console.log(`✅ AI Coach response generated using model: ${mName}`);
             break;
           }
         } catch (err) {
@@ -1125,12 +1008,18 @@ BEHAVIOR RULES:
 
     if (!responseText) {
       if (isCodeEmpty) {
-        responseText = `⚠️ **No Solution Code Found**: I see you haven't written solution code in the editor for **${problemTitle || 'this problem'}** yet! Write your approach first so I can analyze it.`;
-      } else if (act === 'hint') responseText = `💡 **Hint for ${problemTitle || 'this problem'}**:\nAnalyze problem constraints and store visited elements in a Hash Map for O(1) lookup time.`;
-      else if (act === 'explain') responseText = `🧠 **Explanation for ${problemTitle || 'this problem'}**:\nThe code processes input elements. Implement loop logic to evaluate elements step-by-step.`;
-      else if (act === 'optimize') responseText = `⚡ **Optimization**:\nA single-pass Hash Map approach optimizes time complexity to **O(N)**.`;
-      else if (act === 'complexity') responseText = `📊 **Complexity**:\n• **Time Complexity**: **O(N)**\n• **Space Complexity**: **O(N)** auxiliary space.`;
-      else responseText = `AI Coach: I analyzed your query for **${problemTitle || 'this problem'}**. Check boundary edge cases!`;
+        responseText = `⚠️ **No Solution Code Found**: Write your approach in the editor first so I can analyze it.`;
+      } else if (act === 'hint') {
+        responseText = `💡 **Hint for ${problemTitle || 'this problem'}**: Store visited elements in a Hash Map for O(1) lookup.`;
+      } else if (act === 'explain') {
+        responseText = `🧠 **Explanation**: Process input elements step-by-step using a loop and evaluate each condition.`;
+      } else if (act === 'optimize') {
+        responseText = `⚡ **Optimization**: A single-pass Hash Map approach gives **O(N)** time complexity.`;
+      } else if (act === 'complexity') {
+        responseText = `📊 **Complexity**:\n• **Time**: **O(N)**\n• **Space**: **O(N)**`;
+      } else {
+        responseText = `AI Coach: I analyzed your query for **${problemTitle || 'this problem'}**. Check boundary edge cases!`;
+      }
     }
 
     res.json({ success: true, reply: responseText, advice: responseText, userPromptSent: userMessage });
@@ -1141,6 +1030,20 @@ BEHAVIOR RULES:
   }
 };
 
+// -----------------------------------------------------------------------------
+// 6. ROUTE REGISTRATION
+// -----------------------------------------------------------------------------
+
+app.post('/api/problems/execute', handleProblemsExecute);
+app.post('/api/judge/run', handleJudgeRun);
+app.post('/api/judge/submit', handleJudgeSubmit);
+
+// Backward compatibility aliases
+app.post('/api/execute', handleProblemsExecute);
+app.post('/api/run-code', handleProblemsExecute);
+app.post('/api/submit', handleJudgeSubmit);
+app.post('/api/submit-code', handleJudgeSubmit);
+
 app.post('/api/ai/coach', handleAiCoach);
 app.post('/api/ai/copilot', handleAiCoach);
 
@@ -1148,5 +1051,20 @@ app.get('/', (req, res) => {
   res.json({ success: true, message: 'AI Career Copilot Real-Time Server Running 🚀' });
 });
 
+// -----------------------------------------------------------------------------
+// 7. START SERVER
+// -----------------------------------------------------------------------------
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Real-Time Server running on http://localhost:${PORT}`));
+const server = app.listen(PORT, () => {
+  console.log(`🚀 Real-Time Server running on http://localhost:${PORT}`);
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${PORT} is already in use. Kill the existing process or set a different PORT in .env`);
+  } else {
+    console.error('❌ Server error:', err.message);
+  }
+  process.exit(1);
+});
