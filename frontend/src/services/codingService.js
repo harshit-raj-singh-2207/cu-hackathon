@@ -1,48 +1,36 @@
 import { apiRequest } from './api';
 
-/**
- * Coding practice service — connects to the backend coding API.
- */
 export const codingService = {
-  /**
-   * Get list of coding problems with optional filters.
-   */
-  getProblems: (params = {}) => {
-    const query = new URLSearchParams(params).toString();
-    return apiRequest(`/coding/problems${query ? `?${query}` : ''}`, { method: 'GET' });
-  },
+  /** Fetch all problems with optional filters */
+  getProblems: ({ search = '', difficulty = 'ALL', category = 'ALL' } = {}) =>
+    fetch(`/api/problems?search=${encodeURIComponent(search)}&difficulty=${difficulty}&category=${category}`)
+      .then(r => r.json()),
 
-  /**
-   * Get a specific problem by ID.
-   */
-  getProblem: (problemId) => apiRequest(`/coding/problems/${problemId}`, { method: 'GET' }),
+  /** Fetch single problem by ID */
+  getProblem: (id) =>
+    fetch(`/api/problems/${id}`).then(r => r.json()),
 
-  /**
-   * Submit a code solution.
-   */
-  submitSolution: (problemId, code, language) =>
-    apiRequest(`/coding/problems/${problemId}/submit`, {
+  /** Run code against sample test case */
+  runCode: ({ source_code, language, problem_id, input }) =>
+    fetch('/api/judge/run', {
       method: 'POST',
-      body: JSON.stringify({ code, language }),
-    }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source_code, language, problem_id, input }),
+    }).then(r => r.json()),
 
-  /**
-   * Run code against test cases without submitting.
-   */
-  runCode: (problemId, code, language) =>
-    apiRequest(`/coding/problems/${problemId}/run`, {
+  /** Submit code against all test cases */
+  submitCode: ({ source_code, language, problem_id }) =>
+    fetch('/api/judge/submit', {
       method: 'POST',
-      body: JSON.stringify({ code, language }),
-    }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source_code, language, problem_id }),
+    }).then(r => r.json()),
 
-  /**
-   * Get submission history for a problem.
-   */
-  getSubmissions: (problemId) =>
-    apiRequest(`/coding/problems/${problemId}/submissions`, { method: 'GET' }),
-
-  /**
-   * Get user's coding stats.
-   */
-  getStats: () => apiRequest('/coding/stats', { method: 'GET' }),
+  /** Ask AI Coach */
+  askCoach: ({ action, query, problemTitle, problemDescription, userCode, history }) =>
+    fetch('/api/ai/coach', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, query, problemTitle, problemDescription, userCode, history }),
+    }).then(r => r.json()),
 };
