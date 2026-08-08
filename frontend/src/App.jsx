@@ -42,12 +42,15 @@ class PageBoundary extends Component {
 
 /* ─── Lazy Pages ────────────────────────────────────────── */
 const Home = lazy(() => import('./pages/Home/index'));
+const PublicProgress = lazy(() => import('./pages/PublicProgress/index'));
 const Login = lazy(() => import('./pages/Login/index'));
 const Register = lazy(() => import('./pages/Register/index'));
 const Dashboard = lazy(() => import('./pages/Dashboard/index'));
 const Resume = lazy(() => import('./pages/Resume/index'));
 const ATS = lazy(() => import('./pages/ATS/index'));
 const Interview = lazy(() => import('./pages/Interview/index'));
+const MockInterview = lazy(() => import('./pages/MockInterview/index'));
+const PortfolioAnalyzer = lazy(() => import('./pages/PortfolioAnalyzer/index'));
 const Coding = lazy(() => import('./pages/Coding/index'));
 const Jobs = lazy(() => import('./pages/Jobs/index'));
 const Roadmap = lazy(() => import('./pages/Roadmap/index'));
@@ -114,6 +117,7 @@ export default function App() {
           {/* Public — Landing */}
           <Route element={<PublicLayout />}>
             <Route path="/" element={<P C={Home} />} />
+            <Route path="/share/progress/:shareId" element={<P C={PublicProgress} />} />
           </Route>
 
           {/* Auth — no nav */}
@@ -128,6 +132,9 @@ export default function App() {
             <Route path="/resume" element={<P C={Resume} />} />
             <Route path="/ats" element={<P C={ATS} />} />
             <Route path="/interview" element={<P C={Interview} />} />
+            <Route path="/mock-interview" element={<P C={MockInterview} />} />
+            <Route path="/interview/session/:sessionId" element={<P C={MockInterview} />} />
+            <Route path="/portfolio-analyzer" element={<P C={PortfolioAnalyzer} />} />
             <Route path="/coding" element={<P C={Coding} />} />
             <Route path="/jobs" element={<P C={Jobs} />} />
             <Route path="/roadmap" element={<P C={Roadmap} />} />
